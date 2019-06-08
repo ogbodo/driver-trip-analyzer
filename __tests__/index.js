@@ -43,7 +43,37 @@ describe("analysis spec", () => {
 
 describe("driver report", () => {
   test("matches the required data format", async () => {
-    const data = await expect("todo").toBe("todo");
+    const data = await driverReport();
+
+    expect(data[0]).toEqual({
+      fullName: expect.any(String),
+      id: expect.any(String),
+      phone: expect.any(String),
+      noOfTrips: expect.any(Number),
+      noOfVehicles: expect.any(Number),
+      vehicles: [
+        {
+          plate: expect.any(String),
+          manufacturer: expect.any(String)
+        }
+      ],
+      noOfCashTrips: expect.any(Number),
+      noOfNonCashTrips: expect.any(Number),
+      totalAmountEarned: expect.any(Number),
+      totalCashAmount: expect.any(Number),
+      totalNonCashAmount: expect.any(Number),
+      trips: [
+        {
+          user: expect.any(String),
+          created: expect.any(String),
+          pickup: expect.any(String),
+          destination: expect.any(String),
+          billed: expect.any(Number),
+          isCash: expect.any(Boolean)
+        }
+      ]
+    });
+    expect(data.length).toBe(10);
   });
 });
 
