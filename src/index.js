@@ -5,6 +5,7 @@ const { getTrips, getDriver } = require("../src/api/index");
  *
  * @returns {any} Trip data analysis
  */
+
 function analysis() {
   const tripAnalysis = {
     noOfCashTrips: 0,
