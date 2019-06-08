@@ -1,7 +1,7 @@
-const { analysis, driverReport } = require('../src/index');
+const { analysis, driverReport } = require("../src/index");
 
-describe('analysis spec', () => {
-  test('matches the required data format', async () => {
+describe("analysis spec", () => {
+  test("matches the required data format", async () => {
     const data = await analysis();
 
     expect(data).toEqual({
@@ -28,7 +28,7 @@ describe('analysis spec', () => {
     });
   });
 
-  test('analysis solution', async () => {
+  test("analysis solution", async () => {
     const data = await analysis();
 
     expect(data).toMatchObject({
@@ -41,14 +41,14 @@ describe('analysis spec', () => {
   });
 });
 
-describe('driver report', () => {
-  test('matches the required data format', async () => {
-    await expect('todo').toBe('todo');
+describe("driver report", () => {
+  test("matches the required data format", async () => {
+    const data = await expect("todo").toBe("todo");
   });
 });
 
-describe('My own tests go here - I should update this description', () => {
-  test('something', () => {
+describe("My own tests go here - I should update this description", () => {
+  test("something", () => {
     expect(true).toEqual(true);
   });
 });
