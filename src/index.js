@@ -18,39 +18,60 @@ function analysis() {
 
   const allTrips = getTrips();
 
-  allTrips.then(arrayOfTripData => {
-    //Delegate the task of computing mostTripsByDriver and highestEarningDriver respectively.
-    getDriverWithMostTrips(tripAnalysis, arrayOfTripData);
-    getDriverWithHighestEarning(tripAnalysis, arrayOfTripData);
+  allTrips
+    .then(arrayOfTripData => {
+      /**Use the reduce method to construct and return the big object */
+      const re = arrayOfTripData.reduce(
+        (accumulator, currentObject) => {
+          console.log("accumulator", accumulator);
 
-    /**Use the reduce method to construct and return the big object */
-    arrayOfTripData.reduce(
-      (accumulator, currentObject) => {
-        const isCashTrip = currentObject.isCash;
+          const isCashTrip = currentObject.isCash;
 
-        isCashTrip
-          ? accumulator.noOfCashTrips++
-          : accumulator.noOfNonCashTrips++;
+          if (isCashTrip) {
+            const noOfCashTrips = accumulator["noOfCashTrips"]
+              ? ++accumulator["noOfCashTrips"]
+              : 1;
 
-        const billTotal = Number(currentObject.billedTotal.split(",").join());
-        accumulator.billedTotal += billTotal;
+            accumulator["noOfCashTrips"] = noOfCashTrips;
+          } else {
+            const noOfNonCashTrips = accumulator["noOfNonCashTrips"]
+              ? ++accumulator["noOfNonCashTrips"]
+              : 1;
 
-        isCashTrip
-          ? (accumulator.cashBilledTotal += billTotal)
-          : (accumulator.nonCashBilledTotal += billTotal);
+            accumulator["noOfNonCashTrips"] = noOfNonCashTrips;
+          }
 
-        getDriver(currentObject.driverID)
-          .then(driverData => {
-            const driverNoOfVehicle = driverData[vehicleID].length;
+          const billTotal = Number(
+            currentObject.billedAmount.split(",").join()
+          );
+          accumulator.billedTotal += billTotal;
 
-            accumulator.noOfDriversWithMoreThanOneVehicle +=
-              driverNoOfVehicle > 1 ? 1 : 0;
-          })
-          .catch(error => {});
-      },
-      { ...tripAnalysis }
-    );
-  });
+          isCashTrip
+            ? (accumulator.cashBilledTotal += billTotal)
+            : (accumulator.nonCashBilledTotal += billTotal);
+
+          getDriver(currentObject.driverID)
+            .then(driverData => {
+              const driverNoOfVehicle = driverData[vehicleID].length;
+
+              accumulator.noOfDriversWithMoreThanOneVehicle +=
+                driverNoOfVehicle > 1 ? 1 : 0;
+            })
+            .catch(error => {});
+        },
+        { ...tripAnalysis }
+      );
+      //Delegate the task of computing mostTripsByDriver and highestEarningDriver respectively.
+      getDriverWithMostTrips(re, arrayOfTripData);
+      getDriverWithHighestEarning(re, arrayOfTripData);
+
+      console.log("OUTPUT", "re");
+
+      return re;
+    })
+    .catch(error => {
+      console.log(error);
+    });
 }
 
 async function getDriverWithMostTrips(outputObject, drivers) {

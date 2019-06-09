@@ -2,7 +2,12 @@
   "name": "exercise-promises",
   "version": "1.0.0",
   "main": "index.js",
+  "repository": "https",
+  "author": "Izuchukwu",
   "license": "MIT",
+  "scripts": {
+    "test": "jest --watchAll --coverage"
+  },
   "devDependencies": {
     "@types/jest": "^24.0.13",
     "jest": "^24.8.0"
