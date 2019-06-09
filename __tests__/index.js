@@ -30,6 +30,7 @@ describe("analysis spec", () => {
 
   test("analysis solution", async () => {
     const data = await analysis();
+    // console.log(data);
 
     expect(data).toMatchObject({
       noOfCashTrips: 26,
