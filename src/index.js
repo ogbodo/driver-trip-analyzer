@@ -24,6 +24,7 @@ async function analysis() {
 
   return allTrips.then(async arrayOfTripData => {
     /**Use the reduce method to construct and return the trip analysis */
+    const driverMap = new Map();
     const result = arrayOfTripData.reduce(
       (accumulator, trip) => {
         const digitBill = Number(convertFromStringToNumber(trip.billedAmount));
@@ -54,8 +55,10 @@ async function analysis() {
           .then(driverData => {
             const driverNoOfVehicle = driverData.vehicleID.length;
 
-            accumulator.noOfDriversWithMoreThanOneVehicle +=
-              driverNoOfVehicle > 1 ? 1 : 0;
+            if (driverNoOfVehicle > 1) {
+              driverMap.set(trip.driverID, driverData);
+            }
+            accumulator.noOfDriversWithMoreThanOneVehicle = driverMap.size;
           })
           .catch(error => {
             console.log(error);
@@ -72,6 +75,9 @@ async function analysis() {
     const driversCumulativeTrips = await returnDriversCumulative(
       arrayOfTripData
     );
+
+    // for (const value of driverMap.entries()) {
+    // }
 
     await getDriverWithMostTrips(result, driversCumulativeTrips);
 

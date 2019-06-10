@@ -36,7 +36,8 @@ describe("analysis spec", () => {
       noOfNonCashTrips: 24,
       billedTotal: 128224.69,
       cashBilledTotal: 69043.8,
-      nonCashBilledTotal: 59180.89
+      nonCashBilledTotal: 59180.89,
+      noOfDriversWithMoreThanOneVehicle: 3
     });
   });
 });
