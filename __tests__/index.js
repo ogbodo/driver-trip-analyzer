@@ -45,7 +45,7 @@ describe("analysis spec", () => {
 describe("driver report", () => {
   test("matches the required data format", async () => {
     const data = await driverReport();
-    console.log(data[0]);
+    console.log(data);
 
     expect(data[0]).toEqual({
       fullName: expect.any(String),

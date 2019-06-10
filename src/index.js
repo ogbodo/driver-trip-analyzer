@@ -26,15 +26,28 @@ async function analysis() {
     /**Use the reduce method to construct and return the big object */
     const re = arrayOfTripData.reduce(
       (accumulator, trip) => {
-        const digitBill = convertFromStringToNumber(trip.billedAmount);
-        accumulator.billedTotal += digitBill;
+        const digitBill = Number(convertFromStringToNumber(trip.billedAmount));
+
+        accumulator.billedTotal = Number(
+          parseFloat(accumulator.billedTotal + digitBill).toFixed(2)
+        );
 
         if (trip.isCash) {
           accumulator.noOfCashTrips++;
-          accumulator.cashBilledTotal += digitBill;
+
+          accumulator.cashBilledTotal = Number(
+            parseFloat(
+              parseFloat(accumulator.cashBilledTotal) + parseFloat(digitBill)
+            )
+          );
         } else {
           accumulator.noOfNonCashTrips++;
-          accumulator.nonCashBilledTotal += digitBill;
+
+          accumulator.nonCashBilledTotal = Number(
+            parseFloat(
+              parseFloat(accumulator.nonCashBilledTotal) + parseFloat(digitBill)
+            ).toFixed(2)
+          );
         }
 
         getDriver(trip.driverID)
@@ -45,7 +58,8 @@ async function analysis() {
               driverNoOfVehicle > 1 ? 1 : 0;
           })
           .catch(error => {});
-        accumulator.billedTotal = parseFloat(accumulator.billedTotal);
+        accumulator.billedTotal = Number(parseFloat(accumulator.billedTotal));
+
         return accumulator;
       },
       { ...tripAnalysis }
@@ -66,7 +80,6 @@ async function analysis() {
     return finalResult;
   });
 }
-
 async function getDriverWithMostTrips(outputObject, driversCumulativeTrips) {
   const driverIDs = Object.keys(driversCumulativeTrips);
   let maximumTrips = 0;
@@ -96,7 +109,6 @@ async function getDriverWithMostTrips(outputObject, driversCumulativeTrips) {
       totalAmountEarned:
         driversCumulativeTrips[maximumTripDriverID].totalAmountEarned
     };
-
     return outputObject;
   });
 }
@@ -143,11 +155,9 @@ function returnDriversCumulative(arrayOfTripData) {
     if (accumulator[currentObject.driverID]) {
       accumulator[currentObject.driverID].noOfTrips++;
 
-      accumulator[
-        currentObject.driverID
-      ].totalAmountEarned += convertFromStringToNumber(
-        currentObject.billedAmount
-      );
+      accumulator[currentObject.driverID].totalAmountEarned =
+        accumulator[currentObject.driverID].totalAmountEarned +
+        convertFromStringToNumber(currentObject.billedAmount);
     } else {
       accumulator[currentObject.driverID] = {
         noOfTrips: 1,
@@ -183,21 +193,21 @@ async function driverReport() {
   return driverIds.reduce((reportCollection, currentId) => {
     if (driverTripsSummary[currentId]) {
       const driverObject = {};
-      driverObject["fullName"] = drivers[currentId].name;
-      driverObject["id"] = currentId;
-      driverObject["phone"] = drivers[currentId].phone;
-      driverObject["noOfTrips"] = driverTripsSummary[currentId].noOfTrips;
-      driverObject["noOfVehicles"] = drivers[currentId].vehicleID.length;
-      driverObject["vehicles"] = drivers[currentId].vehicleID;
-
       const paymentsObject = returnPaymentStat(currentId, trips);
 
+      driverObject["fullName"] = drivers[currentId].name;
+      driverObject["id"] = currentId;
       driverObject["noOfCashTrips"] = paymentsObject.noOfCashTrips;
       driverObject["noOfNonCashTrips"] = paymentsObject.noOfNonCashTrips;
+      driverObject["noOfTrips"] = driverTripsSummary[currentId].noOfTrips;
+      driverObject["noOfVehicles"] = drivers[currentId].vehicleID.length;
+      driverObject["phone"] = drivers[currentId].phone;
       driverObject["totalAmountEarned"] = paymentsObject.totalAmountEarned;
       driverObject["totalCashAmount"] = paymentsObject.totalCashAmount;
       driverObject["totalNonCashAmount"] = paymentsObject.totalNonCashAmount;
       driverObject["trips"] = extractDriverTrips(currentId, trips);
+      driverObject["vehicles"] = drivers[currentId].vehicleID;
+
       reportCollection.push(driverObject);
     }
 
@@ -226,7 +236,9 @@ function returnPaymentStat(driverId, trips) {
     (accumulator, trip) => {
       if (driverId === trip.driverID) {
         const amountEarned = convertFromStringToNumber(trip.billedAmount);
-        accumulator.totalAmountEarned += amountEarned;
+
+        accumulator.totalAmountEarned =
+          accumulator.totalAmountEarned + amountEarned;
 
         if (trip.isCash) {
           accumulator.noOfCashTrips++;
