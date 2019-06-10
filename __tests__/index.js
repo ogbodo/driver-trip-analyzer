@@ -30,7 +30,6 @@ describe("analysis spec", () => {
 
   test("analysis solution", async () => {
     const data = await analysis();
-    // console.log(data);
 
     expect(data).toMatchObject({
       noOfCashTrips: 26,
@@ -45,7 +44,6 @@ describe("analysis spec", () => {
 describe("driver report", () => {
   test("matches the required data format", async () => {
     const data = await driverReport();
-    console.log(data);
 
     expect(data[0]).toEqual({
       fullName: expect.any(String),

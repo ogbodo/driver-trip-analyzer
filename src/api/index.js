@@ -3,23 +3,21 @@ const trips = require("./data/trips.json");
 const vehicles = require("./data/vehicles.json");
 
 async function sleep(seconds) {
-  await new Promise(resolve => {
+  return new Promise(resolve => {
     setTimeout(resolve, seconds * 1000);
   });
 }
 
 const frozenTrips = Object.freeze(trips);
 
-let tripCosts = 0;
 module.exports.getTrips = async function getTrips() {
-  tripCosts++;
-  sleep(Math.random() * tripCosts);
+  await sleep(Math.random());
 
   return frozenTrips;
 };
 
 module.exports.getDriver = async function getDriver(driverID) {
-  sleep(Math.random());
+  await sleep(Math.random());
 
   const driver = drivers[driverID];
 
@@ -31,7 +29,7 @@ module.exports.getDriver = async function getDriver(driverID) {
 };
 
 module.exports.getVehicle = async function getVehicle(vehicleID) {
-  sleep(Math.random());
+  await sleep(Math.random());
 
   const vehicle = vehicles[vehicleID];
 

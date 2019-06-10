@@ -23,8 +23,8 @@ async function analysis() {
   const allTrips = getTrips();
 
   return allTrips.then(async arrayOfTripData => {
-    /**Use the reduce method to construct and return the big object */
-    const re = arrayOfTripData.reduce(
+    /**Use the reduce method to construct and return the trip analysis */
+    const result = arrayOfTripData.reduce(
       (accumulator, trip) => {
         const digitBill = Number(convertFromStringToNumber(trip.billedAmount));
 
@@ -57,7 +57,10 @@ async function analysis() {
             accumulator.noOfDriversWithMoreThanOneVehicle +=
               driverNoOfVehicle > 1 ? 1 : 0;
           })
-          .catch(error => {});
+          .catch(error => {
+            console.log(error);
+          });
+
         accumulator.billedTotal = Number(parseFloat(accumulator.billedTotal));
 
         return accumulator;
@@ -70,14 +73,9 @@ async function analysis() {
       arrayOfTripData
     );
 
-    await getDriverWithMostTrips(re, driversCumulativeTrips);
+    await getDriverWithMostTrips(result, driversCumulativeTrips);
 
-    const finalResult = await getDriverWithHighestEarning(
-      re,
-      driversCumulativeTrips
-    );
-
-    return finalResult;
+    return await getDriverWithHighestEarning(result, driversCumulativeTrips);
   });
 }
 async function getDriverWithMostTrips(outputObject, driversCumulativeTrips) {
