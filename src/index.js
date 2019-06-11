@@ -1,5 +1,4 @@
 const { getTrips, getDriver } = require("../src/api/index");
-const drivers = require("./api/data/drivers.json");
 
 /**
  * This function should return the trip data analysis
@@ -20,70 +19,76 @@ async function analysis() {
     highestEarningDriver: {}
   };
 
-  const allTrips = getTrips();
+  // const allTrips = getTrips();
+  const arrayOfTripData = await returnDriverIds();
 
-  return allTrips.then(async arrayOfTripData => {
-    /**Use the reduce method to construct and return the trip analysis */
-    const driverMap = new Map();
-    const result = arrayOfTripData.reduce(
-      (accumulator, trip) => {
-        const digitBill = Number(convertFromStringToNumber(trip.billedAmount));
+  // return allTrips.then(async arrayOfTripData => {
+  /**Use the reduce method to construct and return the trip analysis */
+  const driverVehicleMoreThanOneMap = new Map();
+  driverDetailsMap = new Map();
 
-        accumulator.billedTotal = Number(
-          parseFloat(accumulator.billedTotal + digitBill).toFixed(2)
+  driverDetailsMap.set("trips", arrayOfTripData);
+
+  const result = arrayOfTripData.reduce(
+    (accumulator, trip) => {
+      const digitBill = Number(convertFromStringToNumber(trip.billedAmount));
+
+      accumulator.billedTotal = Number(
+        parseFloat(accumulator.billedTotal + digitBill).toFixed(2)
+      );
+
+      if (trip.isCash) {
+        accumulator.noOfCashTrips++;
+
+        accumulator.cashBilledTotal = Number(
+          parseFloat(
+            parseFloat(accumulator.cashBilledTotal) + parseFloat(digitBill)
+          )
         );
+      } else {
+        accumulator.noOfNonCashTrips++;
 
-        if (trip.isCash) {
-          accumulator.noOfCashTrips++;
+        accumulator.nonCashBilledTotal = Number(
+          parseFloat(
+            parseFloat(accumulator.nonCashBilledTotal) + parseFloat(digitBill)
+          ).toFixed(2)
+        );
+      }
 
-          accumulator.cashBilledTotal = Number(
-            parseFloat(
-              parseFloat(accumulator.cashBilledTotal) + parseFloat(digitBill)
-            )
-          );
-        } else {
-          accumulator.noOfNonCashTrips++;
+      getDriver(trip.driverID)
+        .then(driverData => {
+          driverData["driverID"] = trip.driverID;
+          driverDetailsMap.set(trip.driverID, driverData);
 
-          accumulator.nonCashBilledTotal = Number(
-            parseFloat(
-              parseFloat(accumulator.nonCashBilledTotal) + parseFloat(digitBill)
-            ).toFixed(2)
-          );
-        }
+          const driverNoOfVehicle = driverData.vehicleID.length;
 
-        getDriver(trip.driverID)
-          .then(driverData => {
-            const driverNoOfVehicle = driverData.vehicleID.length;
+          if (driverNoOfVehicle > 1) {
+            driverVehicleMoreThanOneMap.set(trip.driverID, driverData);
+          }
 
-            if (driverNoOfVehicle > 1) {
-              driverMap.set(trip.driverID, driverData);
-            }
-            accumulator.noOfDriversWithMoreThanOneVehicle = driverMap.size;
-          })
-          .catch(error => {
-            console.log(error);
-          });
+          accumulator.noOfDriversWithMoreThanOneVehicle =
+            driverVehicleMoreThanOneMap.size;
+        })
+        .catch(error => {
+          console.log(error);
+        });
 
-        accumulator.billedTotal = Number(parseFloat(accumulator.billedTotal));
+      accumulator.billedTotal = Number(parseFloat(accumulator.billedTotal));
 
-        return accumulator;
-      },
-      { ...tripAnalysis }
-    );
+      return accumulator;
+    },
+    { ...tripAnalysis }
+  );
 
-    //Delegate the task of computing mostTripsByDriver and highestEarningDriver respectively.
-    const driversCumulativeTrips = await returnDriversCumulative(
-      arrayOfTripData
-    );
+  //Delegate the task of computing mostTripsByDriver and highestEarningDriver respectively.
 
-    // for (const value of driverMap.entries()) {
-    // }
+  const driversCumulativeTrips = await returnDriversCumulative(arrayOfTripData);
 
-    await getDriverWithMostTrips(result, driversCumulativeTrips);
+  await getDriverWithMostTrips(result, driversCumulativeTrips);
 
-    return await getDriverWithHighestEarning(result, driversCumulativeTrips);
-  });
+  return await getDriverWithHighestEarning(result, driversCumulativeTrips);
 }
+
 async function getDriverWithMostTrips(outputObject, driversCumulativeTrips) {
   const driverIDs = Object.keys(driversCumulativeTrips);
   let maximumTrips = 0;
@@ -154,7 +159,7 @@ async function getDriverWithHighestEarning(
 function returnDriversCumulative(arrayOfTripData) {
   const accumulator = {};
 
-  arrayOfTripData.forEach(currentObject => {
+  for (const currentObject of arrayOfTripData) {
     //Checks if this driver is already added
     if (accumulator[currentObject.driverID]) {
       accumulator[currentObject.driverID].noOfTrips++;
@@ -168,7 +173,7 @@ function returnDriversCumulative(arrayOfTripData) {
         totalAmountEarned: convertFromStringToNumber(currentObject.billedAmount)
       };
     }
-  });
+  }
 
   return accumulator;
 }
@@ -182,6 +187,9 @@ function convertFromStringToNumber(stringValue) {
   return parseFloat(stringValueType);
 }
 
+async function returnDriverIds() {
+  return await getTrips().then(trips => trips);
+}
 /**
  * This function should return the data for drivers in the specified format
  * Don't forget to write tests
@@ -189,28 +197,39 @@ function convertFromStringToNumber(stringValue) {
  * @returns {any} Driver report data
  */
 async function driverReport() {
-  const driverIds = Object.keys(drivers);
-  const trips = await getTrips().then(trips => trips);
-  const driverTripsSummary = await returnDriversCumulative(trips);
+  const driverIds = Array.from(driverDetailsMap.keys());
+
+  const driverTripsSummary = await returnDriversCumulative(
+    driverDetailsMap.get("trips")
+  );
 
   //Perform the reduce operation on the driver Ids
   return driverIds.reduce((reportCollection, currentId) => {
     if (driverTripsSummary[currentId]) {
       const driverObject = {};
-      const paymentsObject = returnPaymentStat(currentId, trips);
 
-      driverObject["fullName"] = drivers[currentId].name;
+      const paymentsObject = returnPaymentStat(
+        currentId,
+        driverDetailsMap.get("trips")
+      );
+
+      driverObject["fullName"] = driverDetailsMap.get(currentId).name;
       driverObject["id"] = currentId;
       driverObject["noOfCashTrips"] = paymentsObject.noOfCashTrips;
       driverObject["noOfNonCashTrips"] = paymentsObject.noOfNonCashTrips;
       driverObject["noOfTrips"] = driverTripsSummary[currentId].noOfTrips;
-      driverObject["noOfVehicles"] = drivers[currentId].vehicleID.length;
-      driverObject["phone"] = drivers[currentId].phone;
+      driverObject["noOfVehicles"] = driverDetailsMap.get(
+        currentId
+      ).vehicleID.length;
+      driverObject["phone"] = driverDetailsMap.get(currentId).phone;
       driverObject["totalAmountEarned"] = paymentsObject.totalAmountEarned;
       driverObject["totalCashAmount"] = paymentsObject.totalCashAmount;
       driverObject["totalNonCashAmount"] = paymentsObject.totalNonCashAmount;
-      driverObject["trips"] = extractDriverTrips(currentId, trips);
-      driverObject["vehicles"] = drivers[currentId].vehicleID;
+      driverObject["trips"] = extractDriverTrips(
+        currentId,
+        driverDetailsMap.get("trips")
+      );
+      driverObject["vehicles"] = driverDetailsMap.get(currentId).vehicleID;
 
       reportCollection.push(driverObject);
     }
@@ -236,7 +255,7 @@ function extractDriverTrips(driverId, trips) {
 }
 
 function returnPaymentStat(driverId, trips) {
-  let d = trips.reduce(
+  return trips.reduce(
     (accumulator, trip) => {
       if (driverId === trip.driverID) {
         const amountEarned = convertFromStringToNumber(trip.billedAmount);
@@ -263,8 +282,6 @@ function returnPaymentStat(driverId, trips) {
       trips: []
     }
   );
-
-  return d;
 }
 
 module.exports = { analysis, driverReport };
