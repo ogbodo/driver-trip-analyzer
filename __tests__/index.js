@@ -45,7 +45,6 @@ describe("analysis spec", () => {
 describe("driver report", () => {
   test("matches the required data format", async () => {
     const data = await driverReport();
-
     expect(data[0]).toEqual({
       fullName: expect.any(String),
       id: expect.any(String),
@@ -60,12 +59,24 @@ describe("driver report", () => {
       totalNonCashAmount: expect.any(Number),
       trips: expect.any(Array)
     });
+
     expect(data.length).toBe(9);
   });
-});
+  test("Driver Solution", async () => {
+    const data = await driverReport();
 
-describe("My own tests go here - I should update this description", () => {
-  test("something", () => {
-    expect(true).toEqual(true);
+    expect(data[0]).toMatchObject({
+      fullName: "Garcia Gaines",
+      id: "d247da84-ffcb-4ca8-8459-f98c99b59822",
+      noOfCashTrips: 1,
+      noOfNonCashTrips: 5,
+      noOfTrips: 6,
+      noOfVehicles: 1,
+      phone: "+234 808-064-1330",
+      totalAmountEarned: 11793.03,
+      totalCashAmount: 1715.16,
+      totalNonCashAmount: 10077.88,
+      vehicles: [{ plateNumber: "EPE-5110-LG", manufacturer: "Ducati" }]
+    });
   });
 });

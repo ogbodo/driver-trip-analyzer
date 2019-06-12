@@ -1,4 +1,4 @@
-const { getTrips, getDriver } = require("../src/api/index");
+const { getTrips, getDriver, getVehicle } = require("../src/api/index");
 
 /**
  * This function should return the trip data analysis
@@ -20,14 +20,14 @@ async function analysis() {
   };
 
   // const allTrips = getTrips();
-  const arrayOfTripData = await returnDriverIds();
+  const arrayOfTripData = await returnAllTrips();
 
   // return allTrips.then(async arrayOfTripData => {
   /**Use the reduce method to construct and return the trip analysis */
   const driverVehicleMoreThanOneMap = new Map();
-  driverDetailsMap = new Map();
+  // driverDetailsMap = new Map();
 
-  driverDetailsMap.set("trips", arrayOfTripData);
+  // driverDetailsMap.set("trips", arrayOfTripData);
 
   const result = arrayOfTripData.reduce(
     (accumulator, trip) => {
@@ -57,8 +57,8 @@ async function analysis() {
 
       getDriver(trip.driverID)
         .then(driverData => {
-          driverData["driverID"] = trip.driverID;
-          driverDetailsMap.set(trip.driverID, driverData);
+          // driverData["driverID"] = trip.driverID;
+          // driverDetailsMap.set(trip.driverID, driverData);
 
           const driverNoOfVehicle = driverData.vehicleID.length;
 
@@ -187,8 +187,37 @@ function convertFromStringToNumber(stringValue) {
   return parseFloat(stringValueType);
 }
 
-async function returnDriverIds() {
+async function returnAllTrips() {
   return await getTrips().then(trips => trips);
+}
+
+async function returnAllDriverDetails(driverIds) {
+  const driverIdPattern = /^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$/;
+
+  const driverVehiclesMap = [];
+
+  for (let driverId of driverIds) {
+    //Checks if this driverId is a valid one or not
+    if (driverIdPattern.test(driverId)) {
+      const driverInfo = getDriver(driverId).then(driverData => {
+        driverData["driverID"] = driverId;
+
+        const vehicleInfo = driverData.vehicleID.map(vehicleId => {
+          return getVehicle(vehicleId).then(vehicle => {
+            const plateNumber = vehicle.plate;
+            const manufacturer = vehicle.manufacturer;
+
+            return { plateNumber, manufacturer };
+          });
+        });
+
+        return [driverData, vehicleInfo];
+      });
+      driverVehiclesMap.push(driverInfo);
+    }
+  }
+
+  return driverVehiclesMap;
 }
 /**
  * This function should return the data for drivers in the specified format
@@ -197,45 +226,47 @@ async function returnDriverIds() {
  * @returns {any} Driver report data
  */
 async function driverReport() {
-  const driverIds = Array.from(driverDetailsMap.keys());
+  // const driverIds = Array.from(driverDetailsMap.keys());
+  const arrayOfTripData = await returnAllTrips();
 
-  const driverTripsSummary = await returnDriversCumulative(
-    driverDetailsMap.get("trips")
+  const driverTripsSummary = await returnDriversCumulative(arrayOfTripData);
+  const driverIds = Object.keys(driverTripsSummary);
+  const collectionOfDriverDetails = await returnAllDriverDetails(driverIds);
+
+  let allDriverReports = await Promise.all(collectionOfDriverDetails).then(
+    async arrayOfDrivers => {
+      const reportCollection = [];
+      for (const driverCompleteData of arrayOfDrivers) {
+        const driver = driverCompleteData[0];
+        const driverVehicles = driverCompleteData[1];
+
+        const driverObject = {};
+        const currentId = driver.driverID;
+        const paymentsObject = returnPaymentStat(currentId, arrayOfTripData);
+
+        driverObject["fullName"] = driver.name;
+        driverObject["id"] = currentId;
+        driverObject["noOfCashTrips"] = paymentsObject.noOfCashTrips;
+        driverObject["noOfNonCashTrips"] = paymentsObject.noOfNonCashTrips;
+        driverObject["noOfTrips"] = driverTripsSummary[currentId].noOfTrips;
+        driverObject["noOfVehicles"] = driver.vehicleID.length;
+        driverObject["phone"] = driver.phone;
+        driverObject["totalAmountEarned"] = paymentsObject.totalAmountEarned;
+        driverObject["totalCashAmount"] = paymentsObject.totalCashAmount;
+        driverObject["totalNonCashAmount"] = paymentsObject.totalNonCashAmount;
+        driverObject["trips"] = extractDriverTrips(currentId, arrayOfTripData);
+        driverObject["vehicles"] = await Promise.all(driverVehicles).then(
+          vehicle => vehicle
+        );
+
+        reportCollection.push(driverObject);
+      }
+
+      return reportCollection;
+    }
   );
 
-  //Perform the reduce operation on the driver Ids
-  return driverIds.reduce((reportCollection, currentId) => {
-    if (driverTripsSummary[currentId]) {
-      const driverObject = {};
-
-      const paymentsObject = returnPaymentStat(
-        currentId,
-        driverDetailsMap.get("trips")
-      );
-
-      driverObject["fullName"] = driverDetailsMap.get(currentId).name;
-      driverObject["id"] = currentId;
-      driverObject["noOfCashTrips"] = paymentsObject.noOfCashTrips;
-      driverObject["noOfNonCashTrips"] = paymentsObject.noOfNonCashTrips;
-      driverObject["noOfTrips"] = driverTripsSummary[currentId].noOfTrips;
-      driverObject["noOfVehicles"] = driverDetailsMap.get(
-        currentId
-      ).vehicleID.length;
-      driverObject["phone"] = driverDetailsMap.get(currentId).phone;
-      driverObject["totalAmountEarned"] = paymentsObject.totalAmountEarned;
-      driverObject["totalCashAmount"] = paymentsObject.totalCashAmount;
-      driverObject["totalNonCashAmount"] = paymentsObject.totalNonCashAmount;
-      driverObject["trips"] = extractDriverTrips(
-        currentId,
-        driverDetailsMap.get("trips")
-      );
-      driverObject["vehicles"] = driverDetailsMap.get(currentId).vehicleID;
-
-      reportCollection.push(driverObject);
-    }
-
-    return reportCollection;
-  }, []);
+  return await Promise.resolve(allDriverReports).then(data => data);
 }
 
 function extractDriverTrips(driverId, trips) {
@@ -254,21 +285,30 @@ function extractDriverTrips(driverId, trips) {
   }, []);
 }
 
+function toTwoDecimalPlace(value) {
+  return Math.trunc(value * 100) / 100;
+}
+
 function returnPaymentStat(driverId, trips) {
   return trips.reduce(
     (accumulator, trip) => {
       if (driverId === trip.driverID) {
         const amountEarned = convertFromStringToNumber(trip.billedAmount);
 
-        accumulator.totalAmountEarned =
-          accumulator.totalAmountEarned + amountEarned;
+        accumulator.totalAmountEarned = toTwoDecimalPlace(
+          accumulator.totalAmountEarned + amountEarned
+        );
 
         if (trip.isCash) {
           accumulator.noOfCashTrips++;
-          accumulator.totalCashAmount += amountEarned;
+          accumulator.totalCashAmount = toTwoDecimalPlace(
+            accumulator.totalCashAmount + amountEarned
+          );
         } else {
           accumulator.noOfNonCashTrips++;
-          accumulator.totalNonCashAmount += amountEarned;
+          accumulator.totalNonCashAmount = toTwoDecimalPlace(
+            accumulator.totalNonCashAmount + amountEarned
+          );
         }
       }
       return accumulator;
