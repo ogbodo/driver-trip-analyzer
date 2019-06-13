@@ -1,3 +1,5 @@
-node_modules
-coverage
+src/bond-report-solution.js
 .DS_Store
+coverage/
+.vscode/
+node_modules/

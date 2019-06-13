@@ -192,14 +192,13 @@ async function returnAllTrips() {
 }
 
 async function returnAllDriverDetails(driverIds) {
-  const driverIdPattern = /^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$/;
-
   const driverVehiclesMap = [];
 
   for (let driverId of driverIds) {
     //Checks if this driverId is a valid one or not
-    if (driverIdPattern.test(driverId)) {
-      const driverInfo = getDriver(driverId).then(driverData => {
+    // if (driverIdPattern.test(driverId)) {
+    const driverInfo = getDriver(driverId)
+      .then(driverData => {
         driverData["driverID"] = driverId;
 
         const vehicleInfo = driverData.vehicleID.map(vehicleId => {
@@ -212,10 +211,13 @@ async function returnAllDriverDetails(driverIds) {
         });
 
         return [driverData, vehicleInfo];
+      })
+      .catch(error => {
+        return [driverId, []];
       });
-      driverVehiclesMap.push(driverInfo);
-    }
+    driverVehiclesMap.push(driverInfo);
   }
+  // }
 
   return driverVehiclesMap;
 }
@@ -226,14 +228,15 @@ async function returnAllDriverDetails(driverIds) {
  * @returns {any} Driver report data
  */
 async function driverReport() {
-  // const driverIds = Array.from(driverDetailsMap.keys());
   const arrayOfTripData = await returnAllTrips();
 
-  const driverTripsSummary = await returnDriversCumulative(arrayOfTripData);
+  const driverTripsSummary = returnDriversCumulative(arrayOfTripData);
+
   const driverIds = Object.keys(driverTripsSummary);
+
   const collectionOfDriverDetails = await returnAllDriverDetails(driverIds);
 
-  let allDriverReports = await Promise.all(collectionOfDriverDetails).then(
+  let allDriverReports = Promise.all(collectionOfDriverDetails).then(
     async arrayOfDrivers => {
       const reportCollection = [];
       for (const driverCompleteData of arrayOfDrivers) {
@@ -241,23 +244,25 @@ async function driverReport() {
         const driverVehicles = driverCompleteData[1];
 
         const driverObject = {};
-        const currentId = driver.driverID;
+        const currentId = driver.driverID || driver;
         const paymentsObject = returnPaymentStat(currentId, arrayOfTripData);
 
-        driverObject["fullName"] = driver.name;
+        driverObject["fullName"] = driver.name || "";
         driverObject["id"] = currentId;
         driverObject["noOfCashTrips"] = paymentsObject.noOfCashTrips;
         driverObject["noOfNonCashTrips"] = paymentsObject.noOfNonCashTrips;
         driverObject["noOfTrips"] = driverTripsSummary[currentId].noOfTrips;
-        driverObject["noOfVehicles"] = driver.vehicleID.length;
-        driverObject["phone"] = driver.phone;
+
+        driverObject["noOfVehicles"] = driver.vehicleID
+          ? driver.vehicleID.length
+          : 0;
+
+        driverObject["phone"] = driver.phone || "";
         driverObject["totalAmountEarned"] = paymentsObject.totalAmountEarned;
         driverObject["totalCashAmount"] = paymentsObject.totalCashAmount;
         driverObject["totalNonCashAmount"] = paymentsObject.totalNonCashAmount;
         driverObject["trips"] = extractDriverTrips(currentId, arrayOfTripData);
-        driverObject["vehicles"] = await Promise.all(driverVehicles).then(
-          vehicle => vehicle
-        );
+        driverObject["vehicles"] = await Promise.all(driverVehicles);
 
         reportCollection.push(driverObject);
       }
@@ -266,7 +271,7 @@ async function driverReport() {
     }
   );
 
-  return await Promise.resolve(allDriverReports).then(data => data);
+  return Promise.resolve(allDriverReports).then(data => data);
 }
 
 function extractDriverTrips(driverId, trips) {
@@ -318,8 +323,7 @@ function returnPaymentStat(driverId, trips) {
       noOfNonCashTrips: 0,
       totalAmountEarned: 0,
       totalCashAmount: 0,
-      totalNonCashAmount: 0,
-      trips: []
+      totalNonCashAmount: 0
     }
   );
 }

@@ -60,7 +60,7 @@ describe("driver report", () => {
       trips: expect.any(Array)
     });
 
-    expect(data.length).toBe(9);
+    expect(data.length).toBe(10);
   });
   test("Driver Solution", async () => {
     const data = await driverReport();
