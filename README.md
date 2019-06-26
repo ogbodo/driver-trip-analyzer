@@ -85,10 +85,8 @@ A sample format is shown
         "billed": 1000,
         "isCash": true
       }
-      // ,... {}, {}
     ]
   }
-  // ,...{}, {}
 ]
 ```
 
